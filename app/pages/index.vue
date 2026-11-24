@@ -132,7 +132,7 @@ const onSubmit = form.handleSubmit(async (values) => {
             class="w-full md:w-48"
             variant="outline"
           >
-            Versuch erstellen
+            Versuche erstellen
           </Button>
         </NuxtLink>
         <NuxtLink to="/experiments">
@@ -140,7 +140,7 @@ const onSubmit = form.handleSubmit(async (values) => {
             size="lg"
             class="w-full md:w-48"
           >
-            Versuche durchsuchen
+            Versuch durchsuchen
           </Button>
         </NuxtLink>
       </div>
