@@ -17,7 +17,7 @@ describe("Api Route GET /api/2fa/status", () => {
   })
 
   describe("when 2FA is disabled for user", () => {
-    const expected = statusDisabled
+    const expected = { ...statusDisabled, setupRequired: true }
 
     const context = u.getTestContext({
       data: userWith2faDisabled,

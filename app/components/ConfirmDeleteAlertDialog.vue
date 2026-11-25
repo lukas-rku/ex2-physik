@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-const { header, message, onDelete } = defineProps({
+const { header, message, onDelete, actionLabel } = defineProps({
   header: {
     type: String,
     required: true,
@@ -8,6 +8,7 @@ const { header, message, onDelete } = defineProps({
     type: String,
     required: true,
   },
+  actionLabel: { type: String, default: "Löschen" },
   onDelete: {
     type: Function,
     required: true,
@@ -35,7 +36,7 @@ const { header, message, onDelete } = defineProps({
           class="hover:bg-destructive hover:text-destructive-foreground"
           @click="onDelete()"
         >
-          Löschen
+          {{ actionLabel }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

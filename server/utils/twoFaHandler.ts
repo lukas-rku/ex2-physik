@@ -32,10 +32,9 @@ export async function verifyTwofaInput(event: unknown) {
   }
 
   let ok = false
-  let usedRecoveryIndex: number | undefined = undefined
   const input = body.code.trim()
 
-  if (record.twoFactorSecret) {
+  if (/^\d+$/.test(input) && record.twoFactorSecret) {
     ok = await verifyTotp(input, record.twoFactorSecret)
   }
 
@@ -45,20 +44,18 @@ export async function verifyTwofaInput(event: unknown) {
       verifyRecoveryCode(input, stored),
     )
     if (idx !== -1) {
-      ok = true
-      usedRecoveryIndex = idx
-
       // Remove used recovery code
       const updatedCodes = [...record.twoFactorRecoveryCodes]
       updatedCodes.splice(idx, 1)
-      await prisma.user.update({
-        where: { id: user.id },
+      const consumed = await prisma.user.updateMany({
+        where: { id: user.id, twoFactorRecoveryCodes: { equals: record.twoFactorRecoveryCodes } },
         data: { twoFactorRecoveryCodes: updatedCodes },
       })
+      ok = consumed.count === 1
     }
   }
 
-  return { ok, user, record, usedRecoveryIndex }
+  return { ok, user, record }
 }
 
 export function ensure2faEnabledGlobally() {

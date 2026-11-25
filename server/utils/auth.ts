@@ -5,6 +5,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma"
 import type { User as PrismaUser } from "@prisma/client"
 import { render } from "@vue-email/render"
 import prisma from "../lib/prisma"
+import { isTwofaGloballyEnabled } from "./twofa"
 import type { Event } from "./utils"
 import verifyAccountEmail from "./emailTemplates/verifyAccountEmail.vue"
 import resetPasswordEmail from "./emailTemplates/resetPasswordEmail.vue"
@@ -128,7 +129,18 @@ export async function getUser(event: Event): Promise<UserDetail | null> {
   const session = await auth.api.getSession({
     headers: event.headers,
   })
-  return sessionToUserDetail(session)
+  event.context.twofaSessionToken = session?.session.token
+  const user = sessionToUserDetail(session)
+  if (user && isTwofaGloballyEnabled() && !event.path.startsWith("/api/2fa/")) {
+    const record = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { twoFactorEnabled: true },
+    })
+    if (!record?.twoFactorEnabled) {
+      throw createError({ statusCode: 403, statusMessage: "2FA setup required" })
+    }
+  }
+  return user
 }
 
 /**

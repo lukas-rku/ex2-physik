@@ -12,6 +12,15 @@ const emit = defineEmits<{
   (e: "changed", updated: { banned: boolean }): void
 }>()
 
+async function resetTwofa() {
+  try {
+    await $fetch(`/api/users/${user.id}/reset-2fa`, { method: "POST" })
+    toast({ title: "2FA zurückgesetzt", description: "Beim nächsten Login ist eine neue Einrichtung erforderlich.", variant: "success" })
+  } catch {
+    toast({ title: "2FA konnte nicht zurückgesetzt werden.", variant: "destructive" })
+  }
+}
+
 async function handleBan() {
   try {
     await $fetch(`/api/users/${user.id}/ban`, { method: "POST" })
@@ -100,6 +109,19 @@ async function handleDelete() {
           <p>Bannen</p>
         </TooltipContent>
       </Tooltip>
+      <ConfirmDeleteAlertDialog
+        header="2FA zurücksetzen?"
+        :message="`Alle Sitzungen von ${user.name} werden beendet. Beim nächsten Login muss 2FA neu eingerichtet werden.`"
+        action-label="Zurücksetzen"
+        :on-delete="resetTwofa"
+      >
+        <Button
+          size="sm"
+          variant="outline"
+        >
+          2FA zurücksetzen
+        </Button>
+      </ConfirmDeleteAlertDialog>
       <ConfirmDeleteAlertDialog
         header="Löschen bestätigen"
         message="Diese Aktion kann nicht rückgängig gemacht werden. Der Account wird dauerhaft gelöscht."

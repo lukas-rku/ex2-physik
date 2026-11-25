@@ -10,18 +10,6 @@ const { toast } = useToast()
 const loading = ref(false)
 const twoFactorAuthCode = ref("")
 
-onMounted(async () => {
-  try {
-    const { data } = await useFetch("/api/2fa/status")
-    if (!data.value?.enabled || !data.value?.required) {
-      followRedirect()
-    }
-  } catch (err) {
-    console.error("Unexpected error fetching 2FA status:", err)
-    followRedirect()
-  }
-})
-
 async function submitChallenge() {
   if (loading.value || !twoFactorAuthCode.value.trim()) return
   loading.value = true
@@ -31,13 +19,7 @@ async function submitChallenge() {
     const isTotp = /^\d{6}$/.test(input)
     const isRecovery = /^[A-Z0-9]{5}-[A-Z0-9]{5}$/.test(input)
 
-    const body = isTotp
-      ? { code: input }
-      : isRecovery
-        ? { recovery: input }
-        : null
-
-    if (!body) {
+    if (!isTotp && !isRecovery) {
       toast({
         title: "Ungültiges Format",
         description: "Bitte gib entweder einen 6-stelligen Code oder einen gültigen Wiederherstellungscode (z. B. ABCDE-12345) ein.",
@@ -47,12 +29,12 @@ async function submitChallenge() {
       return
     }
 
-    const { data } = await useFetch("/api/2fa/challenge", {
+    const data = await $fetch("/api/2fa/challenge", {
       method: "POST",
-      body,
+      body: { code: input },
     })
 
-    if (data.value?.verified) {
+    if (data.verified) {
       followRedirect()
     } else {
       toast({
@@ -85,24 +67,15 @@ async function submitChallenge() {
       </CardHeader>
 
       <CardContent class="grid gap-4">
-        <FormField
-          v-slot="{ componentField }"
-          name="2faInput"
-        >
-          <FormItem>
-            <FormLabel>Code</FormLabel>
-            <FormControl>
-              <Input
-                v-model="twoFactorAuthCode"
-                v-bind="componentField"
-                placeholder="123456 oder ABCDE-12345"
-                inputmode="text"
-                maxlength="11"
-                @keydown.enter.prevent="submitChallenge"
-              />
-            </FormControl>
-          </FormItem>
-        </FormField>
+        <label for="challenge-code">Code</label>
+        <Input
+          id="challenge-code"
+          v-model="twoFactorAuthCode"
+          placeholder="123456 oder ABCDE-12345"
+          inputmode="text"
+          maxlength="11"
+          @keydown.enter.prevent="submitChallenge"
+        />
 
         <Button
           :loading="loading"

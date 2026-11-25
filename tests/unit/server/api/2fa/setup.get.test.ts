@@ -26,7 +26,7 @@ describe("Api Route GET /api/2fa/setup", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubEnv("TWOFA_ENABLED", "true")
-    prisma.user.update = vi.fn().mockResolvedValue(userWith2faDisabled)
+    prisma.user.updateMany = vi.fn().mockResolvedValue({ count: 1 })
     mockGetUserOrThrowError.mockResolvedValue(users.user)
   })
 

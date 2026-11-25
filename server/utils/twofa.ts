@@ -1,4 +1,5 @@
 import crypto from "node:crypto"
+import type { H3Event } from "h3"
 import { generateTOTP, verifyTOTP, getTOTPAuthUri } from "@epic-web/totp"
 import jwt from "jsonwebtoken"
 import bcrypt from "bcrypt"
@@ -73,13 +74,25 @@ export function isTwofaGloballyEnabled(): boolean {
   return (process.env.TWOFA_ENABLED ?? "true").toLowerCase() !== "false"
 }
 
-export function signTwofaCookie(userId: string): string {
-  return jwt.sign({ userId, typ: "2fa" }, COOKIE_SECRET, { algorithm: "HS256", expiresIn: "12h" })
+function sessionSigningKey(event: H3Event) {
+  const token = event.context.twofaSessionToken
+  if (!token) throw createError({ statusCode: 401, statusMessage: "Session required" })
+  return crypto.createHmac("sha256", COOKIE_SECRET).update(token).digest()
 }
 
-export function verifyTwofaCookie(token: string, userId: string): boolean {
+export function confirmTwofaSession(event: H3Event, userId: string) {
+  const token = jwt.sign({ userId, typ: "2fa" }, sessionSigningKey(event), { algorithm: "HS256" })
+  setCookie(event, "twofa_verified", token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  })
+}
+
+export function verifyTwofaCookie(token: string, userId: string, event: H3Event): boolean {
   try {
-    const decoded = jwt.verify(token, COOKIE_SECRET, { algorithms: ["HS256"] }) as { userId?: string, typ?: string }
+    const decoded = jwt.verify(token, sessionSigningKey(event), { algorithms: ["HS256"] }) as { userId?: string, typ?: string }
     return decoded.userId === userId && decoded.typ === "2fa"
   } catch {
     return false

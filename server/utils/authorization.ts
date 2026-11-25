@@ -18,7 +18,7 @@ async function ensureTwofaIfRequired(event: Event, user: UserDetail | null): Pro
   if (!record?.twoFactorEnabled) return
   const cookies = parseCookies(event)
   const token = cookies["twofa_verified"]
-  const verified = token ? verifyTwofaCookie(token, user.id) : false
+  const verified = token ? verifyTwofaCookie(token, user.id, event) : false
   if (!verified) {
     throw createError({ statusCode: 401, statusMessage: "2FA required" })
   }

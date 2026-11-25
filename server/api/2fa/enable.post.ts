@@ -1,6 +1,6 @@
 import prisma from "../../lib/prisma"
 import { getUserOrThrowError } from "~~/server/utils/auth"
-import { generateRecoveryCodes, hashRecoveryCode, verifyTotp } from "~~/server/utils/twofa"
+import { confirmTwofaSession, generateRecoveryCodes, hashRecoveryCode, verifyTotp } from "~~/server/utils/twofa"
 import { ensure2faEnabledGlobally } from "~~/server/utils/twoFaHandler"
 
 export default defineEventHandler(async (event) => {
@@ -25,10 +25,11 @@ export default defineEventHandler(async (event) => {
   const recovery = generateRecoveryCodes(10)
   const hashed = recovery.map(hashRecoveryCode)
   await prisma.user.update({
-    where: { id: user.id },
+    where: { id: user.id, twoFactorEnabled: false, twoFactorSecret: record.twoFactorSecret },
     data: { twoFactorEnabled: true, twoFactorRecoveryCodes: hashed },
   })
 
+  confirmTwofaSession(event, user.id)
   return { recoveryCodes: recovery }
 })
 

@@ -11,7 +11,11 @@ export default defineEventHandler(async (event) => {
   }
   const user = await getUserOrThrowError(event)
   const secret = await generateSecret()
-  await prisma.user.update({ where: { id: user.id }, data: { twoFactorSecret: secret } })
+  const updated = await prisma.user.updateMany({
+    where: { id: user.id, twoFactorEnabled: false },
+    data: { twoFactorSecret: secret },
+  })
+  if (!updated.count) throw createError({ statusCode: 409, statusMessage: "2FA already enabled" })
   const otpauthUrl = buildOtpauthUrl({ secret, accountName: user.email, issuer: runtime.public.appName })
   const qrDataUrl = await QRCode.toDataURL(otpauthUrl)
 

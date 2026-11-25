@@ -3,7 +3,12 @@ import { useForm } from "vee-validate"
 import { toTypedSchema } from "@vee-validate/zod"
 import { useToast } from "@/components/ui/toast/use-toast"
 
+const { client } = useAuth()
 const loading = ref(false)
+const ready = ref(false)
+onMounted(() => {
+  ready.value = true
+})
 const lastWrong = ref(false)
 const lastBanned = ref(false)
 
@@ -16,7 +21,7 @@ const onSubmit = form.handleSubmit(async (values) => {
   if (loading.value) return
   loading.value = true
 
-  const { error } = await useAuth().client.signIn.email(values)
+  const { error } = await client.signIn.email(values)
   if (error) {
     if (error.code === "INVALID_EMAIL_OR_PASSWORD") {
       lastWrong.value = true
@@ -33,18 +38,7 @@ const onSubmit = form.handleSubmit(async (values) => {
       console.error(error)
     }
   } else {
-    // Check if 2FA challenge is required
-    try {
-      const { data } = await useFetch("/api/2fa/status")
-      if (data.value?.enabled && data.value?.required) {
-        await navigateTo("/2fa/challenge")
-      } else {
-        followRedirect()
-      }
-    } catch (e) {
-      console.error(e)
-      followRedirect()
-    }
+    followRedirect()
   }
   loading.value = false
 })
@@ -52,6 +46,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
 <template>
   <form
+    method="post"
     class="grid gap-4"
     @submit="onSubmit"
   >
@@ -100,6 +95,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     </div>
     <Button
       :loading="loading"
+      :disabled="!ready || loading"
       type="submit"
     >
       Anmelden

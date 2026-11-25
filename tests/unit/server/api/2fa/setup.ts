@@ -68,7 +68,7 @@ export function setupTwofaMocks() {
       ...actual,
       verifyTwofaCookie: vi.fn().mockReturnValue(false),
       isTwofaGloballyEnabled: vi.fn().mockReturnValue(true),
-      signTwofaCookie: vi.fn().mockReturnValue("mock-jwt-token"),
+      confirmTwofaSession: vi.fn(),
       generateSecret: vi.fn().mockResolvedValue("JBSWY3DPEHPK3PXP"),
       buildOtpauthUrl: vi.fn().mockReturnValue(
         "otpauth://totp/ViPDA:user@test.test?secret=JBSWY3DPEHPK3PXP&issuer=ViPDA",

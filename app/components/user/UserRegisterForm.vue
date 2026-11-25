@@ -3,7 +3,13 @@ import { toTypedSchema } from "@vee-validate/zod"
 import { useForm } from "vee-validate"
 import { z } from "zod"
 
+const { client } = useAuth()
+const registrationError = ref("")
 const loading = ref(false)
+const ready = ref(false)
+onMounted(() => {
+  ready.value = true
+})
 const knownMails: string[] = []
 
 const schema = userRegisterSchemaWithRepeatValidatePassword.and(
@@ -27,21 +33,36 @@ const onSubmit = form.handleSubmit(async (values) => {
     password: values.password,
   }
 
-  const { error } = await useAuth().client.signUp.email(data)
-  if (error) {
-    if (error.code === "USER_ALREADY_EXISTS") {
-      knownMails.push(values.email)
-      form.validate()
+  registrationError.value = ""
+  try {
+    const registration = await client.signUp.email(data)
+    let error = registration.error
+    // An optional verification email can fail after Better Auth has created the account.
+    if (error && error.status >= 500) {
+      const login = await client.signIn.email({ email: values.email, password: values.password })
+      if (login.data?.token) error = null
     }
-  } else {
-    await navigateTo("/profile")
+    if (error) {
+      if (error.code === "USER_ALREADY_EXISTS") {
+        knownMails.push(values.email)
+        await form.validate()
+      } else {
+        registrationError.value = error.message || "Registrierung fehlgeschlagen."
+      }
+      return
+    }
+    await navigateTo("/2fa/setup", { external: true, replace: true })
+  } catch {
+    registrationError.value = "Registrierung fehlgeschlagen. Bitte prüfe deine Verbindung."
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 })
 </script>
 
 <template>
   <form
+    method="post"
     class="grid gap-4"
     @submit="onSubmit"
   >
@@ -132,8 +153,16 @@ const onSubmit = form.handleSubmit(async (values) => {
         </div>
       </FormItem>
     </FormField>
+    <p
+      v-if="registrationError"
+      role="alert"
+      class="text-destructive"
+    >
+      {{ registrationError }}
+    </p>
     <Button
       :loading="loading"
+      :disabled="!ready || loading"
       type="submit"
     >
       Registrieren
