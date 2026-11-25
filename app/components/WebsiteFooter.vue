@@ -37,7 +37,7 @@ const appName = runtimeConfig.public.appName
         </li>
         <li>
           <NuxtLink
-            href="https://github.com/PhyExDB/PhyExDB"
+            href="https://github.com/lukas-rku/ex2-physik"
             target="_blank"
             rel="noopener noreferrer"
             class="hover:text-foreground flex items-center transition-colors"
