@@ -1,7 +1,7 @@
 import QRCode from "qrcode"
 import prisma from "../../lib/prisma"
 import { getUserOrThrowError } from "~~/server/utils/auth"
-import { buildOtpauthUrl, generateSecret } from "~~/server/utils/twofa"
+import { buildOtpauthUrl, generateSecret, pendingTwofaSetup } from "~~/server/utils/twofa"
 
 export default defineEventHandler(async (event) => {
   const runtime = useRuntimeConfig()
@@ -10,6 +10,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: "Not found" })
   }
   const user = await getUserOrThrowError(event)
+  setResponseHeader(event, "Cache-Control", "no-store")
+  const pending = await pendingTwofaSetup(event)
+  if (pending.data.recoveryCodes?.length) {
+    const record = await prisma.user.findUnique({ where: { id: user.id }, select: { twoFactorSecret: true, twoFactorEnabled: true } })
+    if (!record?.twoFactorEnabled && record?.twoFactorSecret === pending.data.secret) {
+      return { recoveryCodes: pending.data.recoveryCodes }
+    }
+    await pending.clear()
+  }
   const secret = await generateSecret()
   const updated = await prisma.user.updateMany({
     where: { id: user.id, twoFactorEnabled: false },

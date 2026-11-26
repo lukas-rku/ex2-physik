@@ -4,7 +4,7 @@ import { useToast } from "@/components/ui/toast/use-toast"
 const { toast } = useToast()
 
 const { user } = defineProps<{
-  user: Pick<UserDetailAdmin, "id" | "name" | "banned">
+  user: Pick<UserDetailAdmin, "id" | "name" | "banned" | "role">
 }>()
 
 const emit = defineEmits<{
@@ -110,6 +110,7 @@ async function handleDelete() {
         </TooltipContent>
       </Tooltip>
       <ConfirmDeleteAlertDialog
+        v-if="user.role === 'USER' || user.role === 'MODERATOR'"
         header="2FA zurücksetzen?"
         :message="`Alle Sitzungen von ${user.name} werden beendet. Beim nächsten Login muss 2FA neu eingerichtet werden.`"
         action-label="Zurücksetzen"

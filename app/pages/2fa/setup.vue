@@ -18,7 +18,9 @@ async function loadSetup() {
       await navigateTo(status.required ? "/2fa/challenge" : "/profile")
       return
     }
-    qr.value = (await $fetch("/api/2fa/setup", { retry: 0 })).qrDataUrl
+    const setup = await $fetch("/api/2fa/setup", { retry: 0 })
+    if (setup.recoveryCodes) codes.value = setup.recoveryCodes
+    else qr.value = setup.qrDataUrl
   } catch {
     error.value = "Die Einrichtung konnte nicht geladen werden."
   } finally {
@@ -41,6 +43,20 @@ async function confirmCode() {
     code.value = ""
   } catch {
     error.value = "Bestätigung fehlgeschlagen. Prüfe den aktuellen Code deiner App und versuche es erneut."
+  } finally {
+    busy.value = false
+  }
+}
+
+async function finishSetup() {
+  if (!saved.value || busy.value) return
+  busy.value = true
+  error.value = ""
+  try {
+    await $fetch("/api/2fa/confirm-recovery", { method: "POST", body: { saved: true } })
+    await navigateTo("/profile")
+  } catch {
+    error.value = "Bestätigung fehlgeschlagen. Bitte versuche es erneut."
   } finally {
     busy.value = false
   }
@@ -96,8 +112,8 @@ onBeforeRouteLeave(() => !codes.value.length || saved.value)
           type="checkbox"
         > Ich habe meine Wiederherstellungscodes gespeichert.</label>
         <Button
-          :disabled="!saved"
-          @click="navigateTo('/profile')"
+          :disabled="!saved || busy"
+          @click="finishSetup"
         >
           Weiter zum Profil
         </Button>
@@ -143,7 +159,7 @@ onBeforeRouteLeave(() => !codes.value.length || saved.value)
         {{ error }}
       </p>
       <Button
-        v-if="error && !qr"
+        v-if="error && !qr && !codes.length"
         @click="loadSetup"
       >
         Erneut versuchen

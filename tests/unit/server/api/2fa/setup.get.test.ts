@@ -5,10 +5,12 @@ import { users } from "~~/tests/helpers/auth"
 import * as u from "~~/tests/helpers/utils"
 
 import endpoint from "~~/server/api/2fa/setup.get"
+import { pendingTwofaSetup } from "~~/server/utils/twofa"
 
 setupH3Mocks()
 setupAuthMocks()
 setupTwofaMocks()
+vi.stubGlobal("setResponseHeader", vi.fn())
 
 // Mock QRCode
 vi.mock("qrcode", () => ({
@@ -31,6 +33,17 @@ describe("Api Route GET /api/2fa/setup", () => {
   })
 
   describe("when user is authenticated", () => {
+    it("returns the same pending codes on reload without replacing the authenticator", async () => {
+      const pending = await pendingTwofaSetup(u.getEvent({ user: users.user }))
+      const recoveryCodes = ["ABCDE-12345"]
+      vi.mocked(pendingTwofaSetup).mockResolvedValueOnce({
+        ...pending, data: { secret: "pending-secret", recoveryCodes },
+      })
+      prisma.user.findUnique = vi.fn().mockResolvedValue({ twoFactorEnabled: false, twoFactorSecret: "pending-secret" })
+      expect(await endpoint(u.getEvent({ user: users.user }))).toEqual({ recoveryCodes })
+      expect(prisma.user.updateMany).not.toHaveBeenCalled()
+    })
+
     it("should return setup data", async () => {
       const context = u.getTestContext({
         data: userWith2faDisabled,

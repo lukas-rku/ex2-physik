@@ -80,6 +80,15 @@ function sessionSigningKey(event: H3Event) {
   return crypto.createHmac("sha256", COOKIE_SECRET).update(token).digest()
 }
 
+export function pendingTwofaSetup(event: H3Event) {
+  return useSession<{ secret: string, recoveryCodes: string[] }>(event, {
+    name: "twofa_setup",
+    password: sessionSigningKey(event).toString("hex"),
+    sessionHeader: false,
+    cookie: { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production", path: "/api/2fa" },
+  })
+}
+
 export function confirmTwofaSession(event: H3Event, userId: string) {
   const token = jwt.sign({ userId, typ: "2fa" }, sessionSigningKey(event), { algorithm: "HS256" })
   setCookie(event, "twofa_verified", token, {
