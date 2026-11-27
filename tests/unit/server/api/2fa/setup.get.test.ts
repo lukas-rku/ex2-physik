@@ -19,7 +19,7 @@ vi.mock("qrcode", () => ({
 
 // Mock useRuntimeConfig
 vi.stubGlobal("useRuntimeConfig", vi.fn().mockReturnValue({
-  public: { appName: "ViPDA" },
+  public: { appName: "EX2Physik" },
 }))
 
 describe("Api Route GET /api/2fa/setup", () => {
@@ -43,7 +43,7 @@ describe("Api Route GET /api/2fa/setup", () => {
 
       expect(response).toMatchObject({
         secret: "JBSWY3DPEHPK3PXP",
-        issuer: "ViPDA",
+        issuer: "EX2Physik",
         qrDataUrl: "data:image/png;base64,mockqrcode",
       })
       expect(response.otpauthUrl).toContain("otpauth://totp/")

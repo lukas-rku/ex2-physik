@@ -18,7 +18,7 @@
           height="40"
         />
         <p>
-          <span class="font-bold">ViP</span><span class="text-accent">DA</span>
+          <span class="font-bold">EX</span><span class="text-chart-3">2</span><span class="font-bold">Physik</span>
         </p>
       </div>
     </NuxtLink>

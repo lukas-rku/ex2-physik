@@ -34,7 +34,7 @@ export default defineNuxtConfig({
     fileMount: "./public",
     trustedOrigins: "http://localhost:3000",
     public: {
-      appName: "ViPDA",
+      appName: "EX2Physik",
       sectionFileAccepts: "image/jpeg,image/png,image/webp,application/pdf,video/mp4,video/quicktime",
       fileStorage: {
         mount: "public",

@@ -32,7 +32,7 @@ export async function validateFooter(page: Page): Promise<void> {
 
   // Verify current year is displayed
   const currentYear = new Date().getFullYear().toString()
-  await expect(footer.locator("p")).toContainText(`© ${currentYear} ViPDA`)
+  await expect(footer.locator("p")).toContainText(`© ${currentYear} EX2Physik`)
 
   // Verify links and their text
   const links = footer.locator("ul li a")
@@ -54,7 +54,7 @@ export async function validateFooter(page: Page): Promise<void> {
   }
 
   // Verify the GitHub link
-  const githubLink = footer.locator("a[href=\"https://github.com/PhyExDB/PhyExDB\"]")
+  const githubLink = footer.locator("a[href=\"https://github.com/lukas-rku/ex2-physik\"]")
   await expect(githubLink).toBeVisible()
   await expect(githubLink).toHaveAttribute("target", "_blank")
 
