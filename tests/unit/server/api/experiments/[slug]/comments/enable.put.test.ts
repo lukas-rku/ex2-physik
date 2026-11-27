@@ -33,6 +33,13 @@ describe("Api Route api/experiments/[slug]/comments/enable.put", () => {
 
     u.testSuccess(context)
 
+    it("saves both disabling and re-enabling comments", async () => {
+      for (const enable of [false, true]) {
+        await expect(endpoint(u.getEvent({ ...context, user: users.admin, body: { enable } }))).resolves.toEqual({ enable })
+        expect(prisma.experiment.update).toHaveBeenLastCalledWith(expect.objectContaining({ data: { commentsEnabled: enable } }))
+      }
+    })
+
     u.testZodFail(context, [
       {
         body: { },

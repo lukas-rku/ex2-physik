@@ -11,7 +11,7 @@ const props = defineProps<{
 const id = computed(() => props.experiment.id)
 const { page, pageSize } = getRequestPageMeta()
 
-const { data, refresh } = useLazyFetch<Page<ExperimentComment> | null>(`/api/experiments/${id.value}/comments`, {
+const { data, error, refresh } = useLazyFetch(() => `/api/experiments/${id.value}/comments` as const, {
   query: { page, pageSize },
 })
 
@@ -77,20 +77,28 @@ function setReply(commentId: string) {
   replyingToId.value = commentId
 }
 
-async function enableComments(enable: boolean) {
-  await $fetch(`/api/experiments/${id.value}/comments/enable`, {
-    method: "PUT",
-    body: { enable },
-  })
-  refresh()
+const toggling = ref(false)
+const toggleError = ref("")
+async function toggleComments() {
+  if (toggling.value || !data.value) return
+  toggling.value = true
+  toggleError.value = ""
+  try {
+    await $fetch(`/api/experiments/${id.value}/comments/enable`, {
+      method: "PUT",
+      body: { enable: !data.value.commentsEnabled },
+    })
+    await refresh()
+  } catch {
+    toggleError.value = "Die Kommentareinstellung konnte nicht geändert werden."
+  } finally {
+    toggling.value = false
+  }
 }
 
-const canComment = computed(() => data.value && allowsUser(
-  user.value,
-  experimentCommentAbilities.post,
-  { ...props.experiment, commentsEnabled: true },
-))
-const canEnable = allowsUser(user.value, experimentCommentAbilities.enable, props.experiment)
+const canComment = computed(() => !!data.value && allowsUser(user.value, experimentCommentAbilities.post, data.value))
+const canVote = computed(() => !!data.value && allowsUser(user.value, experimentCommentAbilities.vote, data.value))
+const canEnable = computed(() => allowsUser(user.value, experimentCommentAbilities.enable, props.experiment))
 
 async function handleVote(commentId: string) {
   if (!user.value) return
@@ -110,6 +118,12 @@ async function handleVote(commentId: string) {
 <template>
   <div v-if="data">
     <div id="comment-anchor" />
+    <p
+      v-if="toggleError"
+      role="alert"
+    >
+      {{ toggleError }}
+    </p>
 
     <div
       v-if="canComment && !replyingToId"
@@ -173,11 +187,20 @@ async function handleVote(commentId: string) {
           variant="ghost"
           size="sm"
           class="text-muted-foreground"
-          @click="enableComments(false)"
+          :disabled="toggling"
+          @click="toggleComments"
         >
-          Deaktivieren
+          {{ data.commentsEnabled ? "Deaktivieren" : "Aktivieren" }}
         </Button>
       </div>
+
+      <p
+        v-if="!data.commentsEnabled"
+        role="status"
+        class="mb-4 rounded-lg border p-4"
+      >
+        Kommentare wurden deaktiviert.
+      </p>
 
       <div
         v-for="comment in data?.items"
@@ -188,6 +211,8 @@ async function handleVote(commentId: string) {
           :experiment="experiment"
           :comment="comment"
           :user="user"
+          :can-comment="canComment"
+          :can-vote="canVote"
           :active-reply-id="replyingToId"
           @delete-comment="deleteComment"
           @reply="setReply"
@@ -243,7 +268,7 @@ async function handleVote(commentId: string) {
       </div>
 
       <div
-        v-if="data?.pagination.total === 0"
+        v-if="data.commentsEnabled && data.pagination.total === 0"
         class="text-muted-foreground py-16 text-center border-2 border-dashed rounded-2xl"
       >
         Bisher gibt es keine Kommentare.
@@ -256,24 +281,12 @@ async function handleVote(commentId: string) {
       />
     </div>
   </div>
-  <div
-    v-else
-    class="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-2xl text-muted-foreground"
-  >
-    <Icon
-      name="lucide:message-square-off"
-      class="w-12 h-12 mb-4 opacity-20"
-    />
-    <p>Die Kommentarfunktion ist für diesen Versuch deaktiviert.</p>
-    <Button
-      v-if="canEnable"
-      variant="outline"
-      class="mt-4"
-      @click="enableComments(true)"
-    >
-      Kommentare für diesen Versuch erlauben
-    </Button>
-  </div>
 
+  <p
+    v-else-if="error"
+    role="alert"
+  >
+    Die Kommentare konnten nicht geladen werden.
+  </p>
   <ReportDialog />
 </template>

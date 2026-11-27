@@ -1,13 +1,18 @@
-/**
- * Follows a redirect to a specified path or defaults to the "/profile" path.
- *
- * This function retrieves the `redirect` query parameter from the current route.
- * If the `redirect` parameter is not present, it defaults to "/profile".
- * It then navigates to the specified path.
- */
+/** Only return internal paths when resuming navigation after authentication. */
+export function getRedirectTarget() {
+  const redirect = useRoute().query.redirect
+  if (typeof redirect !== "string" || !redirect.startsWith("/") || /[\\\s]/.test(redirect) || redirect.startsWith("//")) return "/profile"
+  return redirect
+}
+
 export function followRedirect() {
-  const path = useRoute().query.redirect as string || "/profile"
-  navigateTo(path, { replace: true })
+  return navigateTo(getRedirectTarget(), { replace: true })
+}
+
+/** Keep the requested page through both setup and the normal login challenge. */
+export function pendingTwofaRoute(status: { setupRequired: boolean, required: boolean }, redirect: string) {
+  const path = status.setupRequired ? "/2fa/setup" : status.required ? "/2fa/challenge" : null
+  return path ? { path, query: { redirect } } : null
 }
 
 /**

@@ -2,7 +2,6 @@ import { getSlugOrIdPrismaWhereClause } from "~~/server/utils/prisma"
 import { sortSigns } from "~~/server/utils/sign"
 
 export default defineEventHandler(async (event) => {
-  const user = await getUser(event)
   const experiment = await prisma.experiment.findFirst({
     where: getSlugOrIdPrismaWhereClause(event),
     include: {
@@ -15,6 +14,9 @@ export default defineEventHandler(async (event) => {
   })
 
   if (!experiment) throw createError({ status: 404, message: "Experiment not found!" })
+
+  // The same URL serves published experiments and private drafts.
+  const user = await authorize(event, experimentAbilities.get, experiment)
 
   // Map to type-safe domain object
   const experimentDetail = mapExperimentToDetail(experiment)

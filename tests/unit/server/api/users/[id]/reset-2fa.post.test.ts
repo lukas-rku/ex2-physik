@@ -51,4 +51,11 @@ describe("Admin 2FA reset", () => {
     await expect(endpoint(event)).rejects.toMatchObject({ statusCode: 403 })
     expect(tx.session.deleteMany).not.toHaveBeenCalled()
   })
+
+  it("returns 404 for a missing account and leaves sessions untouched", async () => {
+    tx.user.updateMany.mockResolvedValueOnce({ count: 0 })
+    tx.user.findUnique.mockResolvedValueOnce(null)
+    await expect(endpoint(u.getEvent(context))).rejects.toMatchObject({ statusCode: 404 })
+    expect(tx.session.deleteMany).not.toHaveBeenCalled()
+  })
 })

@@ -6,6 +6,8 @@ const props = defineProps<{
   comment: ExperimentComment
   user: UserDetail | null
   activeReplyId: string | null
+  canComment: boolean
+  canVote: boolean
 }>()
 
 const emit = defineEmits<{
@@ -65,7 +67,7 @@ function handleImageClick(event: MouseEvent) {
                 : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-indigo-400 dark:hover:bg-slate-800',
               'active:scale-90',
             ]"
-            :disabled="!isLoggedIn"
+            :disabled="!canVote"
             @click="emit('vote', comment.id)"
           >
             <div
@@ -110,7 +112,7 @@ function handleImageClick(event: MouseEvent) {
 
         <div class="flex items-center space-x-2 self-end sm:self-start">
           <Button
-            v-if="user && !comment.parentId"
+            v-if="canComment && !comment.parentId"
             variant="ghost"
             size="sm"
             class="text-xs h-8"
@@ -153,7 +155,7 @@ function handleImageClick(event: MouseEvent) {
     </Card>
 
     <div
-      v-if="activeReplyId === comment.id"
+      v-if="canComment && activeReplyId === comment.id"
       class="mt-2 ml-4"
     >
       <slot name="reply-form" />
@@ -168,6 +170,8 @@ function handleImageClick(event: MouseEvent) {
           :experiment="experiment"
           :comment="child"
           :user="user"
+          :can-comment="canComment"
+          :can-vote="canVote"
           :active-reply-id="activeReplyId"
           @delete-comment="emit('deleteComment', $event)"
           @reply="emit('reply', $event)"

@@ -1,5 +1,4 @@
 export default defineEventHandler(async (event) => {
-  const user = await getUser(event)
   await authorize(event, experimentCommentAbilities.getAll)
 
   const experiment = await nullTo404(async () =>
@@ -7,12 +6,7 @@ export default defineEventHandler(async (event) => {
       where: getSlugOrIdPrismaWhereClause(event),
     }),
   )
-  if (!experiment.commentsEnabled) {
-    return {
-      items: [],
-      pagination: { page: 1, pageSize: 0, total: 0, totalPages: 0 },
-    }
-  }
+  const user = await authorize(event, experimentAbilities.get, experiment)
 
   const where = { experimentId: experiment.id, parentId: null }
 
@@ -63,9 +57,11 @@ export default defineEventHandler(async (event) => {
   }))
 
   return {
+    // A lock closes the discussion for new posts but keeps its history visible.
+    commentsEnabled: experiment.commentsEnabled,
     items: items as ExperimentComment[],
     pagination: pageMeta,
-  } as Page<ExperimentComment>
+  }
 })
 
 defineRouteMeta({
@@ -91,8 +87,9 @@ defineRouteMeta({
           "application/json": {
             schema: {
               type: "object",
-              required: ["items", "pagination"],
+              required: ["commentsEnabled", "items", "pagination"],
               properties: {
+                commentsEnabled: { type: "boolean" },
                 items: {
                   type: "array",
                   items: {

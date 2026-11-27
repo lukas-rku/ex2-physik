@@ -20,9 +20,21 @@ describe("Api Route api/experiments/[slug]/comments/index.get", () => {
   u.mockPrismaForGetAll(context, "comment")
 
   {
-    expectTypeOf<EndpointResult<typeof endpoint>>().toEqualTypeOf<Page<ExperimentComment>>()
+    expectTypeOf<EndpointResult<typeof endpoint>>().toMatchTypeOf<Page<ExperimentComment> & { commentsEnabled: boolean }>()
 
     u.testSlugFails({ ...context, data: experiment })
-    u.testSuccessWithPagination(context, data)
+    u.testSuccessWithPagination({
+      ...context,
+      endpoint: async (event) => {
+        const { commentsEnabled, ...page } = await endpoint(event)
+        expect(commentsEnabled).toBe(true)
+        return page
+      },
+    }, data)
+
+    it("keeps existing comments visible when the discussion is locked", async () => {
+      u.mockPrismaForSlugOrIdGet({ data: { ...experiment, commentsEnabled: false } }, "experiment")
+      await expect(endpoint(u.getEvent(context))).resolves.toEqual({ ...expected, commentsEnabled: false })
+    })
   }
 })

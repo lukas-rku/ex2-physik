@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
     }),
   )
 
-  const user = await authorizeUser(event, experimentCommentAbilities.post, {
+  const user = await authorizeUser(event, experimentCommentAbilities.vote, {
     commentsEnabled: experiment.commentsEnabled,
   })
 

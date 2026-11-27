@@ -36,5 +36,16 @@ describe("Api Route api/experiments/[slug]/comments/index.post", () => {
     u.testZodFailWithEmptyBody(context)
 
     u.testAuthFail(context, [users.guest, users.unverified])
+
+    it("allows only verified admins to post and reply while locked", async () => {
+      u.mockPrismaForSlugOrIdGet({ data: { ...experiment, commentsEnabled: false } }, "experiment")
+      for (const user of [users.user, users.mod, { ...users.admin, emailVerified: false }]) {
+        await expect(endpoint(u.getEvent({ ...context, user }))).rejects.toMatchObject({ statusCode: 403 })
+      }
+      for (const parentId of [undefined, comment.id]) {
+        const event = u.getEvent({ ...context, user: users.admin, body: { ...body, parentId } })
+        await expect(endpoint(event)).resolves.toMatchObject({ id: comment.id })
+      }
+    })
   }
 })

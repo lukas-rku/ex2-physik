@@ -5,7 +5,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma"
 import type { User as PrismaUser } from "@prisma/client"
 import { render } from "@vue-email/render"
 import prisma from "../lib/prisma"
-import { isTwofaGloballyEnabled } from "./twofa"
+import { isTwofaGloballyEnabled, verifyTwofaCookie } from "./twofa"
 import type { Event } from "./utils"
 import verifyAccountEmail from "./emailTemplates/verifyAccountEmail.vue"
 import resetPasswordEmail from "./emailTemplates/resetPasswordEmail.vue"
@@ -122,23 +122,32 @@ export const auth = betterAuth({
   ],
 })
 
-/**
- * getUserDetail()
- */
+// These requests establish or inspect the second factor before the session is verified.
+const twofaEnrollmentRoutes = new Set([
+  "GET /api/2fa/status", "GET /api/2fa/setup", "POST /api/2fa/enable",
+  "POST /api/2fa/confirm-recovery", "POST /api/2fa/challenge",
+])
+
+/** Public reads use guest permissions until this login has completed 2FA. */
 export async function getUser(event: Event): Promise<UserDetail | null> {
   const session = await auth.api.getSession({
     headers: event.headers,
+    // Only the browser-facing session endpoint should renew the session cookie.
+    query: { disableRefresh: true },
   })
+  return getSessionUser(event, session)
+}
+
+export async function getSessionUser(event: Event, session: typeof auth.$Infer.Session | null): Promise<UserDetail | null> {
   event.context.twofaSessionToken = session?.session.token
-  const user = sessionToUserDetail(session)
-  if (user && isTwofaGloballyEnabled() && !event.path.startsWith("/api/2fa/")) {
+  const user = sessionToUserDetail(session) ?? null
+  if (user && isTwofaGloballyEnabled() && !twofaEnrollmentRoutes.has(`${event.method} ${getRequestURL(event).pathname}`)) {
     const record = await prisma.user.findUnique({
       where: { id: user.id },
       select: { twoFactorEnabled: true },
     })
-    if (!record?.twoFactorEnabled) {
-      throw createError({ statusCode: 403, statusMessage: "2FA setup required" })
-    }
+    const token = getCookie(event, "twofa_verified")
+    if (!record?.twoFactorEnabled || !token || !verifyTwofaCookie(token, user.id, event)) return null
   }
   return user
 }

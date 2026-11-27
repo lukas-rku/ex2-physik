@@ -54,7 +54,7 @@ async function finishSetup() {
   error.value = ""
   try {
     await $fetch("/api/2fa/confirm-recovery", { method: "POST", body: { saved: true } })
-    await navigateTo("/profile")
+    await navigateTo(getRedirectTarget(), { external: true, replace: true })
   } catch {
     error.value = "Bestätigung fehlgeschlagen. Bitte versuche es erneut."
   } finally {
@@ -115,7 +115,7 @@ onBeforeRouteLeave(() => !codes.value.length || saved.value)
           :disabled="!saved || busy"
           @click="finishSetup"
         >
-          Weiter zum Profil
+          Weiter
         </Button>
       </template>
       <form

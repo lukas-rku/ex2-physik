@@ -66,12 +66,9 @@ export const experimentAttributeValueAbilities = everyoneSeeAdminEditCRUD
 /** Abilities for experimentComments */
 export const experimentCommentAbilities = {
   getAll: everyone,
-  post: ((user, experiment) =>
-    notNull(user) && (
-      user.emailVerified
-      && experiment.commentsEnabled === true
-    )
-  ) satisfies Ability<[{ commentsEnabled: boolean }]>,
+  // Verified admins can still post moderation notices in a locked discussion.
+  post: ((user, experiment) => verified(user) && (isAdmin(user) || experiment.commentsEnabled)) satisfies Ability<[{ commentsEnabled: boolean }]>,
+  vote: ((user, experiment) => verified(user) && experiment.commentsEnabled) satisfies Ability<[{ commentsEnabled: boolean }]>,
   delete: ((user, comment) =>
     notNull(user) && (
       minModerator(user)
@@ -86,18 +83,13 @@ export const experimentCommentAbilities = {
 export const experimentSectionAbilities = everyoneSeeAdminEditCRUD
 
 /** Abilities for experiments */
+const canEditExperiment = adminOrUserId<Experiment>(experiment => experiment.userId)
 export const experimentAbilities = {
   get: (user, experiment) =>
     experiment.status === "PUBLISHED"
-    || (
-      notNull(user) && (
-        user.id === experiment.userId
-        || (minModerator(user) && experiment.status === "IN_REVIEW")
-      )
-    ),
-  put: (user, experiment) => notNull(user) && (
-    user.role === "ADMIN" || user.id === experiment.userId
-  ),
+    || canEditExperiment(user, experiment)
+    || (minModerator(user) && experiment.status === "IN_REVIEW"),
+  put: canEditExperiment,
   post: verified,
   listOwn: notNull,
   review: minModerator,

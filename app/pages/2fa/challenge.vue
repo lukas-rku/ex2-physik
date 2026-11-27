@@ -35,7 +35,8 @@ async function submitChallenge() {
     })
 
     if (data.verified) {
-      followRedirect()
+      // Reload with the verified session so the destination sees the signed-in account.
+      await navigateTo(getRedirectTarget(), { external: true, replace: true })
     } else {
       toast({
         title: "Ungültiger Code",

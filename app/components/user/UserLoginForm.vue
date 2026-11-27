@@ -38,7 +38,14 @@ const onSubmit = form.handleSubmit(async (values) => {
       console.error(error)
     }
   } else {
-    followRedirect()
+    // Ask for the second factor of the account whose password was just accepted.
+    const redirect = getRedirectTarget()
+    try {
+      const status = await $fetch("/api/2fa/status", { cache: "no-store" })
+      await navigateTo(pendingTwofaRoute(status, redirect) ?? redirect, { replace: true })
+    } catch {
+      toast({ title: "Anmeldung konnte nicht abgeschlossen werden. Bitte versuche es erneut.", variant: "destructive" })
+    }
   }
   loading.value = false
 })

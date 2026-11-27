@@ -1,4 +1,4 @@
-import { describe, expectTypeOf } from "vitest"
+import { describe, expect, expectTypeOf, it } from "vitest"
 import { detail, detailDb } from "./data"
 import { users } from "~~/tests/helpers/auth"
 import type { EndpointResult } from "~~/tests/helpers/utils"
@@ -27,6 +27,12 @@ describe("Api Route /api/experiments/[slug].get", () => {
     expectTypeOf<EndpointResult<typeof endpoint>>().toEqualTypeOf<typeof expected>()
 
     u.testSuccessWithSlugAndId(context)
+
+    it("requires an authorized account to read a draft", async () => {
+      await expect(endpoint(u.getEvent({ ...context, user: users.admin }))).resolves.toMatchObject({ id: data.id })
+      await expect(endpoint(u.getEvent({ ...context, user: null }))).rejects.toMatchObject({ statusCode: 401 })
+      await expect(endpoint(u.getEvent({ ...context, user: users.user2 }))).rejects.toMatchObject({ statusCode: 403 })
+    })
 
     u.testSlugFails(context)
   }

@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   const revision = query.revision === "true" ? true : false
 
   const user = await authorizeUser(event, fileAbilities.post)
-  authorize(event, experimentAbilities.get, experiment)
+  await authorize(event, experimentAbilities.get, experiment)
 
   // warning: ownership is transferred when sucessfully revisioning experiment
   if (revision && experiment.revisedBy) {
